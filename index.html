@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <title>Stars</title>
+
+    <style type="text/css">
+        html { overflow: hidden; }
+        body { margin: 0; padding: 0; }
+    </style>
+
+</head>
+
+<body>
+
+<div id="container"></div>
+
+<script src="lib/three.min.js"></script>
+<script src="lib/EffectComposer.js"></script>
+<script src="lib/CopyShader.js"></script>
+<script src="lib/VerticalBlurShader.js"></script>
+<script src="lib/HorizontalBlurShader.js"></script>
+<script src="lib/ShaderPass.js"></script>
+<script src="lib/RenderPass.js"></script>
+
+<script>
+
+    // settings
+    var mouseSensitivity = 0.1;
+    var starsCount = 2000;
+    var disperce = 1000;
+    var size = 2; // size of  star circle
+    var segments = 20; // segments of a star circe, more - circle is smoother, less - works faster
+    var fov = 75; // "camera frustum aspect ratio" - beats me
+    var farPlane = 1500; // camera's far plane, more - the further away the center is from the screen
+    var blurValue = 0.00025;
+
+    var container = document.getElementById('container');
+    var camera, scene, renderer, composer;
+    var mouseX = 0, mouseY = 0;
+    var windowHalfX = window.innerWidth / 2;
+    var windowHalfY = window.innerHeight / 2;
+
+    init();
+    render();
+
+    // random yellow color
+    function randomYellow() {
+        var min = 0xffff00;
+        var max = 0xffffff;
+
+        return '#' + Math.round(Math.random() * (max - min) + min).toString(16);
+    }
+
+    // render stars
+    function init() {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, 1, farPlane);
+
+        camera.position.z = farPlane / 2;
+
+        // create ${starsCount} stars
+        for (var i = 0; i < starsCount; i++) {
+            var geometry = new THREE.CircleGeometry(size, segments);
+
+            // material with random yellow color
+            var material = new THREE.MeshBasicMaterial({ color: randomYellow() });
+
+            var star = new THREE.Mesh(geometry, material);
+
+            // move star away from the center
+            star.position.x = Math.random() * disperce * 2 - disperce;
+            star.position.y = Math.random() * disperce * 2 - disperce;
+            star.position.z = Math.random() * disperce * 2 - disperce;
+
+            scene.add(star);
+        }
+
+        renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            alpha: true
+        });
+
+        renderer.setClearColor(0x000000, 1);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        container.appendChild(renderer.domElement);
+
+        // add blur shaders
+        composer = new THREE.EffectComposer(renderer);
+        composer.addPass(new THREE.RenderPass(scene, camera));
+
+        var hblur = new THREE.ShaderPass(THREE.HorizontalBlurShader);
+        hblur.uniforms.h.value = blurValue;
+        composer.addPass(hblur);
+
+        var vblur = new THREE.ShaderPass(THREE.VerticalBlurShader);
+        vblur.uniforms.v.value = blurValue;
+        composer.addPass(vblur);
+
+        var effectCopy = new THREE.ShaderPass(THREE.CopyShader);
+        effectCopy.renderToScreen = true;
+        composer.addPass(effectCopy);
+
+        composer.setSize(window.innerWidth, window.innerHeight);
+
+        document.addEventListener('mousemove', onDocumentMouseMove, false);
+        window.addEventListener('resize', onWindowResize, false);
+    }
+
+    function onWindowResize() {
+        windowHalfX = window.innerWidth / 2;
+        windowHalfY = window.innerHeight / 2;
+
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        composer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function onDocumentMouseMove(event) {
+        mouseX = event.clientX - windowHalfX;
+        mouseY = event.clientY - windowHalfY;
+    }
+
+    function render() {
+        // adjust camera position on mouse movement
+        camera.position.x = mouseX * mouseSensitivity;
+        camera.position.y = - mouseY * mouseSensitivity;
+        camera.lookAt(scene.position);
+
+        // render composer instead of renderer to apply blur shaders
+        composer.render(scene, camera);
+        
+//        renderer.render(scene, camera);
+
+        requestAnimationFrame(render);
+    }
+
+</script>
+
+</body>
+</html>
