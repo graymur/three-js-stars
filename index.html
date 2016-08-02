@@ -46,12 +46,18 @@
     init();
     render();
 
+    function randomInRange(min, max) {
+        return '#' + Math.round(Math.random() * (max - min) + min).toString(16);
+    }
+
     // random yellow color
     function randomYellow() {
-        var min = 0xffff00;
-        var max = 0xffffff;
+        return randomInRange(0xffff00, 0xffffff);
+    }
 
-        return '#' + Math.round(Math.random() * (max - min) + min).toString(16);
+    // random red color
+    function randomRed() {
+        return randomInRange(0xff0000, 0xffffff);
     }
 
     // render stars
@@ -65,8 +71,10 @@
         for (var i = 0; i < starsCount; i++) {
             var geometry = new THREE.CircleGeometry(size, segments);
 
-            // material with random yellow color
-            var material = new THREE.MeshBasicMaterial({ color: randomYellow() });
+            // material with random yellow color (some have random red)
+            var material = new THREE.MeshBasicMaterial({
+                color: Math.random() > 0.9 ? randomRed() : randomYellow()
+            });
 
             var star = new THREE.Mesh(geometry, material);
 
